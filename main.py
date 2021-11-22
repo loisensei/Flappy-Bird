@@ -1,5 +1,7 @@
 import random  # For generating random numbers
 import sys  # We will use sys.exit to exit the program
+
+import background as background
 import pygame
 from pygame.locals import *  # Basic pygame imports
 
@@ -14,8 +16,12 @@ GAME_SOUNDS = {}
 PLAYER = 'gallery/sprites/yellowbird-downflap.png'
 BACKGROUND = 'gallery/sprites/background.png'
 PIPE = 'gallery/sprites/pipe.png'
+RAIN1 = pygame.image.load('gallery/sprites/rain.png')
+RAIN = pygame.transform.rotate(RAIN1, 360)
+
 BIRD_LISTS = []
-BIRD_FLAPS = pygame.USEREVENT #tạo timer chim vãy cánh
+BIRD_FLAPS = pygame.USEREVENT  # tạo timer chim vãy cánh
+FPS_TIMER = pygame.USEREVENT  # tao timer tang toc game
 
 
 def welcomeScreen():
@@ -77,7 +83,13 @@ def mainGame():
     player_index = 0
     playerFlapAccv = -8  # velocity while flapping
     playerFlapped = False  # It is true only when the bird is flapping
+    FPS_INCREASE = FPS
 
+    # positions of RAIN
+    rain_y = 70
+
+    # postitions for background
+    background_x = 0
     while True:
         for event in pygame.event.get():
             if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
@@ -94,12 +106,13 @@ def mainGame():
                     player_index += 1
                 else:
                     player_index = 0
+            # if event.type == FPS_TIMER:
+            #     FPS_INCREASE += 0.1
 
         crashTest = isCollide(playerx, playery, upperPipes,
                               lowerPipes)  # This function will return true if the player is crashed
         if crashTest:
             return
-
             # check for score
         playerMidPos = playerx + GAME_SPRITES['player'].get_width() / 2
         for pipe in upperPipes:
@@ -134,7 +147,15 @@ def mainGame():
             lowerPipes.pop(0)
 
         # Lets blit our sprites now
-        SCREEN.blit(GAME_SPRITES['background'], (0, 0))
+        # SCREEN.blit(GAME_SPRITES['background'], (0, 0))
+        draw_Background(background_x)
+        if background_x < -289:
+            background_x = 0
+        background_x -= 5
+        draw_rain(rain_y)
+        if rain_y > 350:  # create rain
+            rain_y = 70
+        rain_y += 5
         for upperPipe, lowerPipe in zip(upperPipes, lowerPipes):
             SCREEN.blit(GAME_SPRITES['pipe'][0], (upperPipe['x'], upperPipe['y']))
             SCREEN.blit(GAME_SPRITES['pipe'][1], (lowerPipe['x'], lowerPipe['y']))
@@ -152,7 +173,7 @@ def mainGame():
             SCREEN.blit(GAME_SPRITES['numbers'][digit], (Xoffset, SCREENHEIGHT * 0.12))
             Xoffset += GAME_SPRITES['numbers'][digit].get_width()
         pygame.display.update()
-        FPSCLOCK.tick(FPS)
+        FPSCLOCK.tick(FPS_INCREASE)
 
 
 def isCollide(playerx, playery, upperPipes, lowerPipes):
@@ -180,6 +201,16 @@ def rotate_bird(bird, bird_mover):
     return new_bird
 
 
+def draw_Background(x):
+    SCREEN.blit(GAME_SPRITES['background'], (x, 0))
+    SCREEN.blit(GAME_SPRITES['background'], (x + 289, 0))
+
+
+def draw_rain(y):
+    SCREEN.blit(RAIN, (0, y))
+    SCREEN.blit(RAIN, (0, y - 320))
+
+
 def getRandomPipe():
     """
     Generate positions of two pipes(one bottom straight and one top rotated ) for blitting on the screen
@@ -201,7 +232,8 @@ if __name__ == "__main__":
     pygame.init()  # Initialize all pygame's modules
     FPSCLOCK = pygame.time.Clock()
     pygame.display.set_caption('Flappy Bird by LOI')
-    pygame.time.set_timer(BIRD_FLAPS, 50) #set thời gian chim vẫy cánh
+    pygame.time.set_timer(BIRD_FLAPS, 50)  # set thời gian chim vẫy cánh
+    # pygame.time.set_timer(FPS_TIMER, 2000)  # set thoi gian tang fps
     GAME_SPRITES['numbers'] = (
         pygame.image.load('gallery/sprites/0.png').convert_alpha(),
         pygame.image.load('gallery/sprites/1.png').convert_alpha(),
@@ -216,10 +248,10 @@ if __name__ == "__main__":
     )
 
     GAME_SPRITES['message'] = pygame.image.load('gallery/sprites/mybackground.png').convert_alpha()
-    GAME_SPRITES['base'] = pygame.image.load('gallery/sprites/base.png').convert_alpha()
-    GAME_SPRITES['pipe'] = (pygame.transform.rotate(pygame.image.load(PIPE).convert_alpha(), 180),
-                            pygame.image.load(PIPE).convert_alpha()
-                            )
+    base = pygame.image.load('gallery/sprites/base.png').convert_alpha()
+    GAME_SPRITES['base'] = pygame.transform.scale(base, (336, 112))
+    FIRE = pygame.image.load(PIPE).convert_alpha()
+    GAME_SPRITES['pipe'] = (pygame.transform.rotate(FIRE, 180), FIRE)
 
     # Game sounds
     GAME_SOUNDS['die'] = pygame.mixer.Sound('gallery/audio/die.wav')
@@ -237,7 +269,7 @@ if __name__ == "__main__":
     BIRD_LISTS.append(GAME_SPRITES['bird_down'])
     BIRD_LISTS.append(GAME_SPRITES['bird_up'])
     BIRD_LISTS.append(GAME_SPRITES['bird_mid'])
-    
+
     while True:
         welcomeScreen()  # Shows welcome screen to the user until he presses a button
         mainGame()  # This is the main game function
